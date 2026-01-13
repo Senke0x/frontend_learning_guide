@@ -40,5 +40,11 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    // Enable history fallback for client-side routing
+    proxy: {},
+  },
+  preview: {
+    port: 3000,
+    strictPort: false,
   },
 });
