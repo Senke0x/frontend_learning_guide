@@ -68,7 +68,7 @@ export default function Home() {
           </div>
 
           {/* Course Content */}
-          <div className="space-y-4">
+          <div id="course" className="space-y-4">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">课程内容</h2>
             
             {courseContent.map((day) => (
@@ -278,6 +278,14 @@ export default function Home() {
                   onClick={() => setExpandedDay(1)}
                 >
                   开始学习第一天
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white/10"
+                >
+                  <a href="/answers">查看作业答案</a>
                 </Button>
               </div>
             </CardContent>

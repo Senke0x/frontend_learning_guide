@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Resources from "./pages/Resources";
 import About from "./pages/About";
+import Answers from "./pages/Answers";
 
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="" component={Home} />
       <Route path="/about" component={About} />
       <Route path="/resources" component={Resources} />
+      <Route path="/answers" component={Answers} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
