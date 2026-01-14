@@ -9,6 +9,438 @@ export const day2Content = {
 Next.js 13 引入了革命性的 App Router，采用 React Server Components 作为默认渲染模式，这代表了 React 生态系统的未来发展方向。`,
   sections: [
     {
+      title: 'React 基础：从问题到解决方案',
+      background: `在学习 Next.js 之前，我们需要先理解 React 的核心价值。React 诞生于 2013 年，由 Facebook（现 Meta）开发并开源。它的出现彻底改变了前端开发的方式。
+
+在 React 之前，前端开发主要使用 jQuery 或原生 JavaScript 直接操作 DOM。随着应用复杂度增加，这种方式暴露出严重的问题：代码难以维护、状态管理混乱、UI 与数据不同步。React 的出现就是为了解决这些痛点。
+
+理解 React 解决了什么问题，比学习它的语法更重要。这将帮助你理解为什么 Next.js 要在 React 基础上做进一步的封装和优化。`,
+      content: `**React 出现前的前端开发痛点**
+
+1. **命令式 DOM 操作**
+   - 需要手动查找 DOM 元素、添加事件监听、更新内容
+   - 代码充斥着 \`document.querySelector\`、\`addEventListener\`、\`innerHTML\`
+   - 难以追踪 UI 状态的变化来源
+
+2. **状态与 UI 不同步**
+   - 数据更新后需要手动更新对应的 DOM
+   - 容易遗漏某些需要更新的地方，导致 UI 显示错误
+   - 多个地方依赖同一数据时，同步更新变得极其复杂
+
+3. **代码复用困难**
+   - 缺乏组件化思想，相似的 UI 逻辑需要重复编写
+   - 难以抽象和封装可复用的 UI 单元
+
+4. **性能优化困难**
+   - 频繁的 DOM 操作导致性能问题
+   - 难以判断哪些 DOM 需要更新，哪些不需要
+
+**React 的核心解决方案**
+
+1. **声明式 UI（Declarative UI）**
+   - 不再手动操作 DOM，而是描述 UI 应该是什么样子
+   - UI = f(state)：UI 是状态的函数
+   - 状态变化时，React 自动更新 UI
+
+2. **组件化（Component-Based）**
+   - 将 UI 拆分成独立、可复用的组件
+   - 每个组件管理自己的状态和逻辑
+   - 组件可以组合成复杂的应用
+
+3. **虚拟 DOM（Virtual DOM）**
+   - React 维护一个轻量级的 DOM 副本（虚拟 DOM）
+   - 状态变化时，先更新虚拟 DOM，然后计算最小差异
+   - 只更新真正需要改变的 DOM 节点，提升性能
+
+4. **单向数据流（Unidirectional Data Flow）**
+   - 数据从父组件流向子组件（通过 props）
+   - 子组件通过回调函数通知父组件更新数据
+   - 数据流向清晰，易于调试和理解
+
+**React 引入的新语法和概念**
+
+1. **JSX 语法**
+   - 在 JavaScript 中编写类似 HTML 的语法
+   - 编译时转换为 \`React.createElement\` 调用
+   - 提供类型检查和更好的开发体验
+
+2. **组件（Components）**
+   - 函数组件：纯函数，接收 props 返回 JSX
+   - 类组件（已过时）：使用 ES6 class 定义
+
+3. **Hooks（React 16.8+）**
+   - \`useState\`：管理组件状态
+   - \`useEffect\`：处理副作用（数据获取、订阅等）
+   - \`useContext\`：跨组件共享数据
+   - \`useRef\`：访问 DOM 或保存可变值
+   - 自定义 Hooks：封装可复用的逻辑
+
+4. **Props 和 State**
+   - Props：父组件传递给子组件的数据（只读）
+   - State：组件内部管理的数据（可变）
+
+**React 引入的新问题**
+
+尽管 React 解决了很多问题，但也带来了新的挑战：
+
+1. **首次加载性能问题**
+   - 纯客户端渲染（CSR）：需要下载、解析、执行 JavaScript 后才能看到内容
+   - 首屏白屏时间长，SEO 不友好（搜索引擎难以抓取内容）
+
+2. **代码分割和懒加载复杂**
+   - 需要手动配置 Webpack 或其他打包工具
+   - 路由级别的代码分割需要额外的库（如 React Router）
+
+3. **数据获取模式不统一**
+   - 需要在 \`useEffect\` 中手动获取数据
+   - 缺乏统一的数据获取和缓存方案
+   - 容易出现竞态条件（race condition）
+
+4. **路由需要额外配置**
+   - React 本身不包含路由功能
+   - 需要使用 React Router 等第三方库
+   - 路由配置与组件分离，不够直观
+
+5. **服务端渲染（SSR）实现复杂**
+   - 需要自己搭建 Node.js 服务器
+   - 处理数据预取、状态同步、水合（Hydration）等问题
+   - 配置复杂，容易出错
+
+**Next.js 与 React 的关系**
+
+Next.js 是基于 React 的全栈框架，它的定位是：
+
+1. **React 的超集**
+   - Next.js 完全兼容 React，所有 React 代码都可以在 Next.js 中运行
+   - 你仍然使用 React 的组件、Hooks、JSX 等特性
+   - Next.js 不是替代 React，而是增强 React
+
+2. **解决 React 的工程化问题**
+   - **内置路由**：文件系统路由，无需配置
+   - **混合渲染**：支持 SSR、SSG、ISR、CSR 多种渲染策略
+   - **自动优化**：代码分割、图片优化、字体优化等开箱即用
+   - **全栈能力**：API 路由、Server Actions，前后端一体化
+
+3. **引入新的架构模式**
+   - **React Server Components**：组件可以在服务器运行
+   - **App Router**：基于文件系统的新一代路由
+   - **流式渲染**：边计算边返回，提升首屏速度
+
+4. **开发体验提升**
+   - 零配置启动项目
+   - 内置 TypeScript 支持
+   - 快速刷新（Fast Refresh）
+   - 开发和生产环境一致
+
+**类比理解**
+
+- **React**：就像汽车的发动机，提供核心动力（组件化、声明式 UI）
+- **Next.js**：就像完整的汽车，在发动机基础上加上车身、轮胎、导航系统等（路由、SSR、优化）
+
+你可以只用 React 构建应用（就像只用发动机），但需要自己解决很多问题。Next.js 提供了一套完整的解决方案，让你专注于业务逻辑。
+
+**学习路径建议**
+
+1. **先理解 React 核心概念**：组件、Props、State、Hooks
+2. **再学习 Next.js 特性**：路由、渲染策略、数据获取
+3. **最后掌握高级特性**：Server Components、Server Actions、中间件
+
+接下来的章节将详细介绍 Next.js 的各项特性。`,
+      codeExample: \`// ==========================================
+// React 基础：从 jQuery 到 React
+// ==========================================
+
+// ----- jQuery 时代的代码（命令式）-----
+/*
+<!DOCTYPE html>
+<html>
+<body>
+  <div id="app">
+    <h1 id="title">计数器</h1>
+    <p>当前计数: <span id="count">0</span></p>
+    <button id="increment">增加</button>
+    <button id="decrement">减少</button>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    // 状态存储在全局变量中
+    let count = 0;
+
+    // 手动更新 DOM
+    function updateCount() {
+      $('#count').text(count);
+    }
+
+    // 手动绑定事件
+    $('#increment').on('click', function() {
+      count++;
+      updateCount();
+    });
+
+    $('#decrement').on('click', function() {
+      count--;
+      updateCount();
+    });
+  </script>
+</body>
+</html>
+*/
+
+// 问题：
+// 1. 状态和 UI 分离，容易不同步
+// 2. 需要手动查找 DOM 元素
+// 3. 需要手动更新每个相关的 DOM
+// 4. 代码难以复用和测试
+
+// ----- React 时代的代码（声明式）-----
+// Counter.tsx
+import { useState } from 'react';
+
+export default function Counter() {
+  // 状态由 React 管理
+  const [count, setCount] = useState(0);
+
+  // UI 是状态的函数，状态变化时 React 自动更新 UI
+  return (
+    <div>
+      <h1>计数器</h1>
+      <p>当前计数: {count}</p>
+      <button onClick={() => setCount(count + 1)}>增加</button>
+      <button onClick={() => setCount(count - 1)}>减少</button>
+    </div>
+  );
+}
+
+// 优势：
+// 1. 状态和 UI 绑定，自动同步
+// 2. 不需要手动操作 DOM
+// 3. 代码简洁，易于理解
+// 4. 组件可复用
+
+// ----- React 核心概念演示 -----
+
+// 1. 组件化：将 UI 拆分成独立的组件
+function Button({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+    >
+      {children}
+    </button>
+  );
+}
+
+function CounterWithComponents() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold">计数器</h1>
+      <p className="my-4">当前计数: {count}</p>
+      <div className="space-x-2">
+        <Button onClick={() => setCount(count + 1)}>增加</Button>
+        <Button onClick={() => setCount(count - 1)}>减少</Button>
+        <Button onClick={() => setCount(0)}>重置</Button>
+      </div>
+    </div>
+  );
+}
+
+// 2. Props：父组件向子组件传递数据
+interface UserCardProps {
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
+function UserCard({ name, email, avatar }: UserCardProps) {
+  return (
+    <div className="p-4 border rounded">
+      {avatar && <img src={avatar} alt={name} className="w-16 h-16 rounded-full" />}
+      <h3 className="font-bold">{name}</h3>
+      <p className="text-gray-600">{email}</p>
+    </div>
+  );
+}
+
+function UserList() {
+  const users = [
+    { id: 1, name: 'Alice', email: 'alice@example.com' },
+    { id: 2, name: 'Bob', email: 'bob@example.com' },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {users.map(user => (
+        <UserCard key={user.id} name={user.name} email={user.email} />
+      ))}
+    </div>
+  );
+}
+
+// 3. State：组件内部状态管理
+function TodoList() {
+  const [todos, setTodos] = useState<string[]>([]);
+  const [input, setInput] = useState('');
+
+  const addTodo = () => {
+    if (input.trim()) {
+      setTodos([...todos, input]);
+      setInput('');
+    }
+  };
+
+  const removeTodo = (index: number) => {
+    setTodos(todos.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="p-4">
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+          placeholder="添加待办事项..."
+          className="flex-1 p-2 border rounded"
+        />
+        <button onClick={addTodo} className="px-4 py-2 bg-blue-500 text-white rounded">
+          添加
+        </button>
+      </div>
+      <ul className="space-y-2">
+        {todos.map((todo, index) => (
+          <li key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+            <span>{todo}</span>
+            <button
+              onClick={() => removeTodo(index)}
+              className="text-red-500 hover:text-red-700"
+            >
+              删除
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// 4. useEffect：处理副作用
+function DataFetcher() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 组件挂载时获取数据
+    fetch('https://api.example.com/data')
+      .then(res => res.json())
+      .then(data => {
+        setData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []); // 空依赖数组表示只在挂载时执行一次
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error}</div>;
+  return <div>数据: {JSON.stringify(data)}</div>;
+}
+
+// 5. 自定义 Hook：封装可复用逻辑
+function useCounter(initialValue = 0) {
+  const [count, setCount] = useState(initialValue);
+
+  const increment = () => setCount(c => c + 1);
+  const decrement = () => setCount(c => c - 1);
+  const reset = () => setCount(initialValue);
+
+  return { count, increment, decrement, reset };
+}
+
+function CounterWithCustomHook() {
+  const { count, increment, decrement, reset } = useCounter(0);
+
+  return (
+    <div>
+      <p>计数: {count}</p>
+      <button onClick={increment}>+1</button>
+      <button onClick={decrement}>-1</button>
+      <button onClick={reset}>重置</button>
+    </div>
+  );
+}
+
+// ----- React 的问题：纯客户端渲染 -----
+/*
+问题演示：
+
+1. 首屏白屏
+   - 用户访问页面时，先下载 HTML（几乎是空的）
+   - 然后下载 JavaScript bundle（可能很大）
+   - 执行 JavaScript，渲染 React 组件
+   - 最后才看到内容
+
+2. SEO 不友好
+   - 搜索引擎爬虫看到的是空 HTML
+   - 虽然 Google 可以执行 JavaScript，但其他搜索引擎可能不行
+
+3. 数据获取在客户端
+   - 组件渲染后才开始获取数据（useEffect）
+   - 用户需要等待数据加载
+   - 可能出现多次请求（瀑布流）
+
+这些问题促使了 Next.js 的诞生！
+*/
+
+// ----- Next.js 如何解决这些问题 -----
+/*
+1. 服务端渲染（SSR）
+   - 在服务器上渲染 React 组件
+   - 返回完整的 HTML 给客户端
+   - 用户立即看到内容，然后 JavaScript 接管交互
+
+2. 静态生成（SSG）
+   - 构建时生成 HTML
+   - 部署后直接返回静态文件
+   - 速度最快，适合内容不常变化的页面
+
+3. React Server Components
+   - 组件在服务器运行，不发送 JavaScript 到客户端
+   - 可以直接访问数据库、文件系统
+   - 减少客户端 JavaScript 体积
+
+4. 自动代码分割
+   - 每个页面只加载需要的 JavaScript
+   - 路由切换时按需加载
+   - 提升首屏加载速度
+
+接下来的章节将详细介绍 Next.js 的这些特性！
+*/
+\`,
+      keyPoints: [
+        'React 解决了命令式 DOM 操作、状态同步、代码复用等问题',
+        'React 的核心是声明式 UI、组件化、虚拟 DOM、单向数据流',
+        'React 引入了 JSX、Hooks、Props/State 等新概念',
+        'React 的问题：首屏性能、SEO、数据获取模式、路由配置',
+        'Next.js 是 React 的超集，解决了 React 的工程化问题',
+        'Next.js 提供了路由、SSR/SSG、优化、全栈能力等特性',
+        '学习 Next.js 前需要先掌握 React 的核心概念'
+      ],
+      references: [
+        { text: 'React 官方文档', url: 'https://react.dev' },
+        { text: 'React 哲学', url: 'https://react.dev/learn/thinking-in-react' },
+        { text: 'Why React?', url: 'https://react.dev/learn' },
+        { text: 'Next.js vs React', url: 'https://nextjs.org/learn/foundations/from-javascript-to-react' }
+      ]
+    },
+    {
       title: 'Next.js 框架概述',
       background: `Next.js 诞生于 2016 年，最初是为了解决 React 应用的服务端渲染问题。随着版本迭代，它逐渐发展成为一个功能完整的全栈框架。
 
