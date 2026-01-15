@@ -7,9 +7,25 @@
  * 1. 日期选择器处理 - 动态计算"下周"日期
  * 2. 等待搜索结果加载 - 使用 waitForResponse/waitForSelector
  * 3. 提取房源信息 - 名称、价格、评分等
+ *
+ * 改进特性：
+ * - 随机延迟防止反爬检测
+ * - 多语言选择器自动适配
+ * - 选择器降级策略
+ * - 全面的弹窗处理
  */
 
 import { test, expect, type Page, type Locator } from '@playwright/test';
+
+// 导入工具函数
+import { randomDelay, humanClick, humanWait, humanScroll } from '../utils/anti-detection';
+import { PopupHandler } from '../utils/popup-handler';
+import {
+  SELECTORS,
+  LOCALE_PATTERNS,
+  findElement,
+  findElementWithRetry,
+} from '../selectors/airbnb-selectors';
 
 // ============================================================================
 // 类型定义
@@ -86,8 +102,9 @@ function formatDateForUrl(date: Date): string {
 
 class AirbnbSearchPage {
   readonly page: Page;
+  readonly popupHandler: PopupHandler;
 
-  // 搜索表单元素
+  // 搜索表单元素 - 使用多语言正则匹配
   readonly locationInput: Locator;
   readonly dateButton: Locator;
   readonly guestsButton: Locator;
@@ -95,11 +112,15 @@ class AirbnbSearchPage {
 
   constructor(page: Page) {
     this.page = page;
+    this.popupHandler = new PopupHandler(page);
 
-    // 使用多种选择器策略，提高稳定性
-    this.locationInput = page.getByRole('searchbox', { name: /地点|Where|Location/i });
-    this.dateButton = page.getByRole('button', { name: /时间|When|Date/i }).first();
-    this.guestsButton = page.getByRole('button', { name: /人员|Who|Guests/i }).first();
+    // 设置自动处理浏览器原生对话框
+    this.popupHandler.setupDialogHandler();
+
+    // 使用多语言选择器策略，提高稳定性
+    this.locationInput = page.getByRole('searchbox', { name: LOCALE_PATTERNS.location });
+    this.dateButton = page.getByRole('button', { name: LOCALE_PATTERNS.dates }).first();
+    this.guestsButton = page.getByRole('button', { name: LOCALE_PATTERNS.guests }).first();
     this.searchButton = page.getByTestId('structured-search-input-search-button');
   }
 
@@ -110,25 +131,46 @@ class AirbnbSearchPage {
     await this.page.goto('https://www.airbnb.com', {
       waitUntil: 'domcontentloaded',
     });
+
+    // 随机延迟模拟人类行为
+    await randomDelay(1000, 2000);
+
     // 等待搜索框可见
     await this.locationInput.waitFor({ state: 'visible', timeout: 15000 });
+
+    // 首次加载后处理弹窗
+    await this.popupHandler.dismissAll();
   }
 
   /**
    * 输入搜索地点
    */
   async enterLocation(location: string): Promise<void> {
-    // 点击地点输入框
-    await this.locationInput.click();
+    // 点击地点输入框（使用人性化点击）
+    await humanClick(this.locationInput);
+    await randomDelay(300, 600);
     await this.locationInput.fill(location);
 
-    // 等待搜索建议出现
-    await this.page.waitForSelector('[role="listbox"]', { timeout: 10000 });
+    // 等待搜索建议出现（使用降级选择器）
+    const suggestions = await findElementWithRetry(this.page, SELECTORS.locationSuggestions);
+    if (!suggestions) {
+      // 降级：直接等待 role="listbox"
+      await this.page.waitForSelector('[role="listbox"]', { timeout: 10000 });
+    }
 
-    // 点击第一个搜索建议
-    const firstSuggestion = this.page.locator('[role="option"]').first();
-    await firstSuggestion.waitFor({ state: 'visible' });
-    await firstSuggestion.click();
+    // 随机延迟后选择第一个建议
+    await randomDelay(500, 1000);
+
+    // 点击第一个搜索建议（使用降级选择器）
+    const firstOption = await findElement(this.page, SELECTORS.locationOption);
+    if (firstOption) {
+      await humanClick(firstOption);
+    } else {
+      // 降级处理
+      const fallbackOption = this.page.locator('[role="option"]').first();
+      await fallbackOption.waitFor({ state: 'visible' });
+      await humanClick(fallbackOption);
+    }
   }
 
   /**
@@ -138,24 +180,29 @@ class AirbnbSearchPage {
    */
   async selectDates(checkIn: Date, checkOut: Date): Promise<void> {
     // 等待日历出现（选择地点后通常会自动展开）
-    const calendar = this.page.locator('[role="application"]').filter({ hasText: /日历|Calendar/i });
+    const calendar = await findElement(this.page, SELECTORS.calendar);
 
     // 如果日历没有自动展开，手动点击日期按钮
-    const isCalendarVisible = await calendar.isVisible().catch(() => false);
+    const isCalendarVisible = calendar ? await calendar.isVisible().catch(() => false) : false;
     if (!isCalendarVisible) {
-      await this.dateButton.click();
-      await calendar.waitFor({ state: 'visible', timeout: 5000 });
+      await humanClick(this.dateButton);
+      await randomDelay(500, 1000);
+      // 重新检查日历
+      const calendarRetry = this.page.locator('[role="application"]');
+      await calendarRetry.waitFor({ state: 'visible', timeout: 5000 });
     }
 
-    // 选择入住日期
+    // 随机延迟后选择入住日期
+    await randomDelay(300, 600);
     const checkInPattern = formatDateForAirbnb(checkIn);
     const checkInButton = this.page.getByRole('button', { name: new RegExp(checkInPattern, 'i') });
-    await checkInButton.click();
+    await humanClick(checkInButton);
 
-    // 选择退房日期
+    // 随机延迟后选择退房日期
+    await randomDelay(300, 600);
     const checkOutPattern = formatDateForAirbnb(checkOut);
     const checkOutButton = this.page.getByRole('button', { name: new RegExp(checkOutPattern, 'i') });
-    await checkOutButton.click();
+    await humanClick(checkOutButton);
   }
 
   /**
@@ -163,17 +210,22 @@ class AirbnbSearchPage {
    */
   async setAdults(count: number): Promise<void> {
     // 点击人员按钮
-    await this.guestsButton.click();
+    await humanClick(this.guestsButton);
+    await randomDelay(500, 800);
 
-    // 等待人数选择器出现
-    const increaseButton = this.page.getByTestId('stepper-adults-increase-button');
-    await increaseButton.waitFor({ state: 'visible', timeout: 5000 });
+    // 等待人数选择器出现（使用降级选择器）
+    let increaseButton = await findElement(this.page, SELECTORS.guestsIncrease);
+    if (!increaseButton) {
+      // 降级到直接使用 testid
+      increaseButton = this.page.getByTestId('stepper-adults-increase-button');
+      await increaseButton.waitFor({ state: 'visible', timeout: 5000 });
+    }
 
-    // 点击增加按钮
+    // 点击增加按钮（使用随机延迟）
     for (let i = 0; i < count; i++) {
-      await increaseButton.click();
-      // 短暂等待，避免点击过快
-      await this.page.waitForTimeout(200);
+      await humanClick(increaseButton);
+      // 随机等待，模拟人类操作
+      await randomDelay(300, 700);
     }
   }
 
@@ -181,34 +233,44 @@ class AirbnbSearchPage {
    * 执行搜索
    */
   async search(): Promise<void> {
-    // 点击搜索按钮
-    await this.searchButton.click();
+    // 随机延迟后点击搜索按钮
+    await randomDelay(500, 1000);
+    await humanClick(this.searchButton);
 
     // 等待 URL 变化（表示导航到搜索结果页）
     await this.page.waitForURL(/\/s\//, { timeout: 30000 });
 
     // 等待搜索结果加载
     await this.waitForSearchResults();
+
+    // 搜索结果页处理弹窗
+    await this.popupHandler.dismissAll();
   }
 
   /**
    * 等待搜索结果加载完成
    */
   async waitForSearchResults(): Promise<void> {
-    // 方法1: 等待房源卡片出现
-    const listingCard = this.page.locator('[data-testid="card-container"]').first();
+    // 方法1: 使用降级选择器等待房源卡片
+    const listingCard = await findElement(this.page, SELECTORS.listingCard);
 
-    // 方法2: 备用 - 等待包含价格信息的元素
-    const priceElement = this.page.locator('text=/\\$\\d+|SGD|CNY/').first();
+    // 方法2: 备用 - 等待包含价格信息的元素（多货币支持）
+    const priceElement = this.page.locator(`text=${LOCALE_PATTERNS.currency.source}`).first();
 
     // 等待任一元素出现
     await Promise.race([
-      listingCard.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
+      listingCard?.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
       priceElement.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
+      // 降级：直接等待卡片容器
+      this.page.locator('[data-testid="card-container"]').first()
+        .waitFor({ state: 'visible', timeout: 20000 }).catch(() => {}),
     ]);
 
     // 额外等待确保内容完全加载
     await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+
+    // 随机延迟模拟人类阅读
+    await randomDelay(1000, 2000);
   }
 
   /**
@@ -217,29 +279,41 @@ class AirbnbSearchPage {
   async extractListings(maxCount = 10): Promise<ListingInfo[]> {
     const listings: ListingInfo[] = [];
 
-    // 使用多种选择器策略找到房源卡片
-    const cards = this.page.locator('[data-testid="card-container"], [itemprop="itemListElement"]');
+    // 使用降级选择器策略找到房源卡片
+    const primarySelector = SELECTORS.listingCard.primary;
+    const fallbackSelectors = SELECTORS.listingCard.fallbacks.join(', ');
+    const cards = this.page.locator(`${primarySelector}, ${fallbackSelectors}`);
     const cardCount = await cards.count();
     const actualCount = Math.min(cardCount, maxCount);
+
+    console.log(`[Extraction] Found ${cardCount} cards, extracting ${actualCount}`);
 
     for (let i = 0; i < actualCount; i++) {
       const card = cards.nth(i);
 
       try {
-        // 提取房源名称
-        const nameElement = card.locator('[data-testid="listing-card-title"], [id*="title"]').first();
+        // 提取房源名称（使用降级选择器）
+        const titleSelectors = [
+          SELECTORS.listingTitle.primary,
+          ...SELECTORS.listingTitle.fallbacks,
+        ].join(', ');
+        const nameElement = card.locator(titleSelectors).first();
         const name = await nameElement.textContent().catch(() => null);
 
-        // 提取价格
-        const priceElement = card.locator('text=/\\$[\\d,]+|¥[\\d,]+/').first();
+        // 提取价格（多货币支持）
+        const priceElement = card.locator(`text=${LOCALE_PATTERNS.currency.source}`).first();
         const price = await priceElement.textContent().catch(() => null);
 
         // 提取评分
         const ratingElement = card.locator('[aria-label*="rating"], text=/\\d+\\.\\d+/').first();
         const rating = await ratingElement.textContent().catch(() => null);
 
-        // 提取链接
-        const linkElement = card.locator('a[href*="/rooms/"]').first();
+        // 提取链接（使用降级选择器）
+        const linkSelectors = [
+          SELECTORS.listingLink.primary,
+          ...SELECTORS.listingLink.fallbacks,
+        ].join(', ');
+        const linkElement = card.locator(linkSelectors).first();
         const url = await linkElement.getAttribute('href').catch(() => null);
 
         if (name) {
@@ -261,25 +335,17 @@ class AirbnbSearchPage {
 
   /**
    * 处理可能出现的弹窗（如 Cookie 提示、翻译提示等）
+   * @deprecated 使用 popupHandler.dismissAll() 代替
    */
   async dismissPopups(): Promise<void> {
-    const popupSelectors = [
-      'button:has-text("Got it")',
-      'button:has-text("知道了")',
-      'button:has-text("Accept")',
-      'button:has-text("接受")',
-      'button:has-text("Close")',
-      'button:has-text("关闭")',
-      '[aria-label="Close"]',
-    ];
+    await this.popupHandler.dismissAll();
+  }
 
-    for (const selector of popupSelectors) {
-      const button = this.page.locator(selector).first();
-      if (await button.isVisible().catch(() => false)) {
-        await button.click().catch(() => {});
-        await this.page.waitForTimeout(500);
-      }
-    }
+  /**
+   * 获取已处理的弹窗列表
+   */
+  getDismissedPopups(): string[] {
+    return this.popupHandler.getDismissedPopups();
   }
 }
 
@@ -373,6 +439,9 @@ test.describe('Airbnb 搜索自动化', () => {
     // 直接导航到搜索结果页
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
 
+    // 随机延迟模拟人类行为
+    await randomDelay(1000, 2000);
+
     // 等待搜索结果加载
     await searchPage.waitForSearchResults();
 
@@ -390,6 +459,12 @@ test.describe('Airbnb 搜索自动化', () => {
     listings.forEach((listing, index) => {
       console.log(`${index + 1}. ${listing.name} - ${listing.price || 'N/A'}`);
     });
+
+    // 输出已处理的弹窗
+    const dismissedPopups = searchPage.getDismissedPopups();
+    if (dismissedPopups.length > 0) {
+      console.log(`\n已处理弹窗: ${dismissedPopups.join(', ')}`);
+    }
   });
 });
 
@@ -405,17 +480,20 @@ test.describe('Airbnb 数据提取工具', () => {
 
     await page.goto(targetUrl, { waitUntil: 'networkidle' });
 
-    const searchPage = new AirbnbSearchPage(page);
-    await searchPage.dismissPopups();
+    // 随机延迟
+    await randomDelay(1000, 2000);
 
-    // 滚动页面以加载更多房源
+    const extractPage = new AirbnbSearchPage(page);
+    await extractPage.dismissPopups();
+
+    // 滚动页面以加载更多房源（使用人性化滚动）
     for (let i = 0; i < 3; i++) {
-      await page.evaluate(() => window.scrollBy(0, window.innerHeight));
-      await page.waitForTimeout(1000);
+      await humanScroll(page, 'down', 800);
+      await randomDelay(800, 1500);
     }
 
     // 提取所有可见房源
-    const listings = await searchPage.extractListings(20);
+    const listings = await extractPage.extractListings(20);
 
     // 输出 JSON 格式
     console.log(JSON.stringify(listings, null, 2));

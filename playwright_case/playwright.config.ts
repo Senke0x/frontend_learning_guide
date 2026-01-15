@@ -30,6 +30,23 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+
+    /* Anti-detection settings */
+    viewport: { width: 1920, height: 1080 },
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+
+    /* Browser launch options to reduce automation detection */
+    launchOptions: {
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process',
+      ],
+    },
+
+    /* Longer action timeout for slow networks */
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
   },
 
   /* Configure projects for major browsers */
